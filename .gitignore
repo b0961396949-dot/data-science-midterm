@@ -1,0 +1,18 @@
+# Python 環境與快取
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# 憑證及瀏覽器登入資料
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.github_chrome_profile/
+*chrome_profile*/
+github_home.*
+github_block*
+google_verification.png
