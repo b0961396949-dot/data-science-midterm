@@ -67,16 +67,7 @@ def main():
         driver.set_page_load_timeout(45)
         driver.get(URL)
         wait_for_results(driver)
-        # 最多操作四輪；找不到更多結果按鈕就停止，因此結果範圍是當次已載入內容。
-        for _ in range(4):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-            # XPath 同時找 a 或 button，文字包含中文或英文的更多結果，再保留可見元素。
-            more = [b for b in driver.find_elements(By.XPATH, "//*[self::a or self::button][contains(., '更多結果') or contains(., 'More results')]") if b.is_displayed()]
-            if more:
-                more[0].click()
-                wait_for_results(driver)
-            else:
-                break
+        load_more_results(driver)
         # 捲動或載入更多內容後也可能轉到驗證頁，收集前再確認一次。
         wait_for_results(driver)
         # rows 保留輸出順序，seen 集合專門用來檢查重複網址。
@@ -105,6 +96,8 @@ def main():
         finally:
             if temp_path is not None:
                 temp_path.unlink(missing_ok=True)
+        for title, href in rows:
+            print(f"{title}\n{href}\n")
         print(f"搜尋列內容：{QUERY}\n完成：{len(rows)} 筆，已存至 {OUT}")
     except TimeoutException as error:
         print(f"本次未完成：{error.msg}\n未寫入 CSV；若有舊檔會保留。")
@@ -119,6 +112,36 @@ def main():
                 driver.quit()
             except WebDriverException:
                 pass  # 使用者可能已手動關閉 Chrome。
+
+
+def result_urls(driver):
+    """以結果網址集合判斷有沒有增加內容，不把既有的 h3 當作新資料。"""
+    return {
+        a.get_attribute("href")
+        for a in driver.find_elements(By.CSS_SELECTOR, "#search a[href]")
+        if a.get_attribute("href")
+    }
+
+
+def load_more_results(driver):
+    """最多四輪；捲動或點擊後等候網址集合改變，沒有新內容就停止。"""
+    for _ in range(4):
+        before = result_urls(driver)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        more = [button for button in driver.find_elements(
+            By.XPATH,
+            "//*[self::a or self::button][contains(., '更多結果') or contains(., 'More results')]",
+        ) if button.is_displayed()]
+        if more:
+            more[0].click()
+        try:
+            WebDriverWait(driver, 15 if more else 3).until(
+                lambda d: verification_required(d) or bool(result_urls(d) - before)
+            )
+        except TimeoutException:
+            print("沒有載入新的搜尋結果，保存本次已取得的內容。")
+            break
+        wait_for_results(driver)
 
 
 # 直接執行此檔（含 Spyder 執行檔案）才呼叫 main；被其他程式 import 時不自動抓資料。
