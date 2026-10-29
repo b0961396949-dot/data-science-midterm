@@ -37,8 +37,8 @@ def main():
         # raw_decode 從 match.end() 開始讀一個 JSON 值；回傳的下一個位置在此不使用。
         # 因此陣列後面即使還有其他 JavaScript，也不需要當成 JSON 解析。
         products, _ = json.JSONDecoder().raw_decode(response.text, match.end())
-        if not products:
-            raise RuntimeError("商品資料為空")
+        if not isinstance(products, list) or not products or not all(isinstance(p, dict) for p in products):
+            raise RuntimeError("商品資料必須是非空的 JSON 物件列表")
         # 切片 products[start:start + 10] 每次取最多 10 筆，最後不足 10 筆也會保存。
         for start in range(0, len(products), 10):
             page += 1
@@ -47,6 +47,8 @@ def main():
             with target.open("w", newline="", encoding="utf-8-sig") as f:
                 w = csv.writer(f); w.writerow(["商品編號", "商品名稱", "價格"])
                 w.writerows([[p.get("id", ""), p.get("title", ""), p.get("price", "")] for p in products[start:start + 10]])
+            for product in products[start:start + 10]:
+                print(f"{product.get('id', '')}｜{product.get('title', '')}｜{product.get('price', '')}")
             print(f"儲存頁面: {page}（{min(10, len(products) - start)} 筆）")
         # 這一頁已內嵌全部商品資料；清空 url 讓外層迴圈結束，沒有另外請求分頁網址。
         url = ""
