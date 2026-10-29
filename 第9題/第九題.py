@@ -72,12 +72,12 @@ def main():
                 if (!node) break;
                 const nestedHeading = Array.from(node.querySelectorAll('h2, h3, [role="heading"]'))
                   .some(h => h !== heading && wanted.includes(clean(h.innerText)));
-                if (nestedHeading) continue;
-                if (node.matches('section')) break;
+                if (nestedHeading) break;
                 const links = Array.from(node.querySelectorAll('a[aria-label][href]'))
                   .filter(a => visible(a) && clean(a.getAttribute('aria-label'))
                     && a.href.includes('news.google.com/read'));
                 if (links.length) { container = node; break; }
+                if (node.matches('section')) break;
               }
               if (!container) continue;
               for (const a of container.querySelectorAll('a[aria-label][href]')) {
@@ -114,6 +114,13 @@ def main():
             if key not in seen:
                 seen.add(key)
                 unique_records.append(record)
+
+        # 分類入口不等於新聞；至少取得一篇指定分類的新聞才更新檔案。
+        if not any(record[0] in SECTION_NAMES for record in unique_records):
+            raise RuntimeError("沒有取得指定分類的新聞，未更新 google_news.csv")
+        for section in ["焦點提要", *SECTION_NAMES]:
+            titles = [record[1] for record in unique_records if record[0] == section]
+            print(f"{section}：{titles}")
 
         # with 自動關檔；w 覆寫舊檔，newline 避免多餘換行，UTF-8 BOM 方便 Excel 辨識中文。
         with CSV_FILE.open("w", newline="", encoding="utf-8-sig") as file:
