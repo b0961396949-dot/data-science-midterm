@@ -30,15 +30,23 @@ def main():
         if search is None:
             raise RuntimeError("找不到 momo 搜尋欄；請確認網站是否改版或出現驗證頁")
         # clear 清除舊文字，send_keys 模擬輸入 nba，Keys.ENTER 模擬按下 Enter。
+        before_search_url = driver.current_url
         search.clear(); search.send_keys("nba", Keys.ENTER)
-        # 此條件也可能因頁面已有超過 20 個連結而提早成立，並不保證商品全部載入。
-        wait.until(lambda d: "search" in d.current_url.lower() or "keyword" in d.current_url.lower() or len(d.find_elements(By.CSS_SELECTOR, "a[href]")) > 20)
+        # 必須離開原頁並進入搜尋網址；首頁連結很多不能當成搜尋成功。
+        wait.until(lambda d: search_page_ready(d.current_url, before_search_url))
         # page_source 保存當下 HTML 字串；write_text 指定 UTF-8 避免中文編碼不一致。
         OUT.write_text(driver.page_source, encoding="utf-8")
         print(f"搜尋頁已存至 {OUT}\n目前網址：{driver.current_url}")
     finally:
         # finally 在成功或發生例外時都會執行，確保 Chrome 與 WebDriver 正常關閉。
         driver.quit()
+
+
+def search_page_ready(current_url, before_search_url):
+    """確認網址確實切換到搜尋頁，避免首頁連結數量造成假成功。"""
+    return current_url != before_search_url and any(
+        marker in current_url.lower() for marker in ("search", "keyword")
+    )
 
 
 # 直接執行此檔（含 Spyder 執行檔案）才呼叫 main；被其他程式 import 時不自動抓資料。
