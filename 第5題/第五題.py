@@ -3,7 +3,7 @@
 # 使用技術：requests 與 BeautifulSoup 先找排行榜入口，再取得 more 連結的完整頁面。
 # 流程說明：取得排行榜首頁 → 追蹤 more 網址 → 解析巢狀表格 → 輸出 Taipei_movies.csv。
 # 輸出內容：排名、片名、本週票房、累計票房。
-# 報告提醒：以來源實際回傳的筆數為準；程式沒有硬性檢查是否恰好 20 筆。
+# 報告提醒：至少取得 20 筆才更新 CSV，輸出來源順序的前 20 筆；不足時保留舊檔。
 # ================================================================
 
 import csv
@@ -75,7 +75,12 @@ for title_cell in full_soup.select("td.at11"):
         cumulative_box_office,
     ])
 
-print(f"[3/4] 找到 {len(movies)} 筆票房資料，正在寫入 CSV...")
+if len(movies) < 20:
+    raise RuntimeError(f"只取得 {len(movies)} 筆，未滿題目要求的 20 筆；沒有更新舊 CSV")
+movies = movies[:20]
+for rank, title, current, cumulative in movies:
+    print(f"{rank}｜{title}｜本週：{current}｜累計：{cumulative}")
+print(f"[3/4] 已確認 {len(movies)} 筆票房資料，正在寫入 CSV...")
 
 with output_file.open("w", newline="", encoding="utf-8-sig") as file:
     writer = csv.writer(file)
