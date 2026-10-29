@@ -101,6 +101,8 @@ def main():
             writer.writerows([[QUERY, title, href] for title, href in results])
         temporary.replace(CSV_FILE)
 
+        for title, href in results:
+            print(f"{title}\n{href}\n")
         driver.save_screenshot(str(SCREENSHOT_FILE))
         print(f"搜尋「{QUERY}」找到 {len(results)} 筆結果，已存入：{CSV_FILE}")
         print(f"頁面截圖已存入：{SCREENSHOT_FILE}")
